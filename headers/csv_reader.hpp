@@ -3,22 +3,17 @@
 
 #include <boost/interprocess/file_mapping.hpp>
 #include <boost/interprocess/mapped_region.hpp>
+#include <boost/algorithm/string.hpp>
+#include <boost/lexical_cast.hpp>
 
-#include <fstream>
 #include <iostream>
+#include <mutex>
 
-
+#include "data_queue.hpp"
 using namespace std;
 
 
 namespace bip = boost::interprocess;
-
-struct PriceData {
-    int64_t receive_ts;
-    int64_t exchange_ts;
-    double price;
-    double quantity;
-};
 
 class CSVReader {
 private:
@@ -29,12 +24,14 @@ private:
     size_t position;
     size_t last_size;
 
+    shared_ptr<data_queue> tasks;
+
     void Refresh(size_t position);
 
 public:
     string filename;
 
-    CSVReader(string filename);
+    CSVReader(string filename, shared_ptr<data_queue> _tasks);
 
     ~CSVReader() {};
 

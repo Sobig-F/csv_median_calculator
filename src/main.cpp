@@ -1,32 +1,25 @@
 #include <iostream>
-#include <thread>
 
 #include "config.hpp"
 #include "get_arg.hpp"
-#include "csv_reader.hpp"
+#include "data_queue.hpp"
+#include "ReadersManager.hpp"
+#include "median_calc.hpp"
 
 int main(int argc, char* argv[]) {
     try {
 
         Config config = parsing(get_args(argc, argv));
-        cout << "Config file: " << config.config_file << endl;
-        cout << "Input dir: " << config.input_dir << endl;
-        cout << "Output dir: " << config.output_dir << endl;
+
+        shared_ptr<data_queue> tasks = make_shared<data_queue>();
+        unique_ptr<ReadersManager> readers_manager = make_unique<ReadersManager>(tasks);
         
-        cout << "CSV filename masks:" << endl;
-        for (const auto& mask : config.csv_filename_mask) {
-            cout << "  - " << mask << endl;
+        for (int i = 0; i < config.csv_files.size(); ++i) {
+            readers_manager->append_file(config.csv_files[i]);
         }
 
-        vector<unique_ptr<CSVReader>> readers;
-        vector<jthread> threads;
-        unique_ptr<CSVReader> reader;
-        for (int i = 0; i < config.csv_files.size(); ++i) {
-            reader = make_unique<CSVReader>(config.csv_files[i]);
-            cout << reader->filename << endl;
-            threads.emplace_back(&CSVReader::ReadFile, reader.get());
-            readers.push_back(move(reader));
-        }
+        shared_ptr<MedianCalc> median_calc = make_shared<MedianCalc>(tasks);
+        jthread calc(&MedianCalc::Calc, median_calc.get());
 
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;

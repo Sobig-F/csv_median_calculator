@@ -1,0 +1,29 @@
+#ifndef MEDIAN_CALC_HPP
+#define MEDIAN_CALC_HPP
+
+#include <thread>
+#include <chrono>
+#include <cmath>
+#include <iostream>
+#include <iomanip>
+
+#include <boost/accumulators/accumulators.hpp>
+#include <boost/accumulators/statistics.hpp>
+
+#include "data_queue.hpp"
+
+using namespace boost::accumulators;
+using namespace std;
+
+class MedianCalc {
+private:
+    accumulator_set<double, features<tag::median(with_p_square_quantile)> > acc;
+    shared_ptr<data_queue> tasks;
+public:
+    MedianCalc(shared_ptr<data_queue> _tasks);
+    ~MedianCalc();
+
+    void Calc();
+};
+
+#endif

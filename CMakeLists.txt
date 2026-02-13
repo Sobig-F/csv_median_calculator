@@ -14,6 +14,9 @@ set(BOOST_INCLUDE_LIBRARIES
     filesystem
     interprocess
     regex
+    algorithm
+    lexical_cast
+    accumulators
 )
 set(BOOST_ENABLE_CMAKE ON)
 
@@ -42,16 +45,18 @@ add_executable(csv_median_calculator
 
 # Подключаем заголовочные файлы
 target_include_directories(csv_median_calculator PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}
+    headers
 )
 
 # Линкуем библиотеки
 target_link_libraries(csv_median_calculator PRIVATE
     Boost::program_options
     Boost::filesystem
-    # Boost::system
     Boost::regex
     Boost::interprocess
+    Boost::algorithm
+    Boost::lexical_cast
+    Boost::accumulators
     tomlplusplus::tomlplusplus
 )
 
