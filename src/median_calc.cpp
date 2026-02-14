@@ -2,7 +2,9 @@
 
 const double EPSILON = 1e-10;
 
-MedianCalc::MedianCalc(shared_ptr<data_queue> _tasks) {
+MedianCalc::MedianCalc(shared_ptr<data_queue> _tasks)
+    :   tdigest(make_unique<TDigest>(25)) 
+{
     tasks = _tasks;
 }
 
@@ -16,18 +18,19 @@ void MedianCalc::Calc() {
     while (true) {
         if (tasks->size() > 0) {
             task = tasks->pop();
-            acc(task->price);
-
-            if (boost::accumulators::count(acc) > 5) {
-                now_median = median(acc);
-                if (fabs(now_median - old_median) > EPSILON) {
-                    fileStreamer_mutex.lock();
-                    // cout << "New median: " << fixed << setprecision(8) << median(acc) << " Time: " << task->receive_ts << endl;
+            tdigest->add(task->price);
+            now_median = tdigest->median();
+            if (fabs(now_median - old_median) > EPSILON) {
+                if (fileStreamer) {
+                    out_mutex.lock();
                     (*fileStreamer) << task->receive_ts << ";" << now_median << "\n";
-                    fileStreamer_mutex.unlock();
-                    old_median = now_median;
+                    out_mutex.unlock();
+                } else {
+                    out_mutex.lock();
+                    cout << std::fixed << std::setprecision(8) << "receive_ts: " << task->receive_ts << " / median: " << now_median << endl;
+                    out_mutex.unlock();
                 }
-
+                old_median = now_median;
             }
 
         } else {

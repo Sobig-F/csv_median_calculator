@@ -6,23 +6,21 @@
 #include <cmath>
 #include <iostream>
 #include <iomanip>
+#include <limits>
 #include <mutex>
-
-#include <boost/accumulators/accumulators.hpp>
-#include <boost/accumulators/statistics.hpp>
 
 #include "data_queue.hpp"
 #include "file_stream.hpp"
+#include "TDigest.hpp"
 
-using namespace boost::accumulators;
 using namespace std;
 
 class MedianCalc {
 private:
-    accumulator_set<double, features<tag::median(with_p_square_quantile)> > acc;
+    unique_ptr<TDigest> tdigest;
     shared_ptr<data_queue> tasks;
     shared_ptr<FileStreamer> fileStreamer;
-    mutex fileStreamer_mutex;
+    mutex out_mutex;
 public:
     MedianCalc(shared_ptr<data_queue> _tasks);
     ~MedianCalc();
