@@ -5,6 +5,7 @@
 #include "data_queue.hpp"
 #include "ReadersManager.hpp"
 #include "median_calc.hpp"
+#include "file_stream.hpp"
 
 int main(int argc, char* argv[]) {
     try {
@@ -13,12 +14,14 @@ int main(int argc, char* argv[]) {
 
         shared_ptr<data_queue> tasks = make_shared<data_queue>();
         unique_ptr<ReadersManager> readers_manager = make_unique<ReadersManager>(tasks);
-        
+        shared_ptr<MedianCalc> median_calc = make_shared<MedianCalc>(tasks);
+        shared_ptr<FileStreamer> fileStreamer = make_shared<FileStreamer>(config.output_dir + "/median.csv");
+        median_calc->set_streamer(fileStreamer);
+
         for (int i = 0; i < config.csv_files.size(); ++i) {
             readers_manager->append_file(config.csv_files[i]);
         }
 
-        shared_ptr<MedianCalc> median_calc = make_shared<MedianCalc>(tasks);
         jthread calc(&MedianCalc::Calc, median_calc.get());
 
     } catch (const std::exception& e) {

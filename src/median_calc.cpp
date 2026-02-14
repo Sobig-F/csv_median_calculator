@@ -20,9 +20,11 @@ void MedianCalc::Calc() {
 
             if (boost::accumulators::count(acc) > 5) {
                 now_median = median(acc);
-
                 if (fabs(now_median - old_median) > EPSILON) {
-                    cout << "New median: " << fixed << setprecision(8) << median(acc) << " Time: " << task->receive_ts << endl;
+                    fileStreamer_mutex.lock();
+                    // cout << "New median: " << fixed << setprecision(8) << median(acc) << " Time: " << task->receive_ts << endl;
+                    (*fileStreamer) << task->receive_ts << ";" << now_median << "\n";
+                    fileStreamer_mutex.unlock();
                     old_median = now_median;
                 }
 
@@ -32,4 +34,8 @@ void MedianCalc::Calc() {
             this_thread::sleep_for(std::chrono::seconds(1));
         }
     }
+}
+
+void MedianCalc::set_streamer(shared_ptr<FileStreamer> _fileStreamer) {
+    fileStreamer = _fileStreamer;
 }
