@@ -1,19 +1,35 @@
+/**
+ * \file types.hpp
+ * \brief Основные типы данных для обработки CSV
+ * \author github: Sobig-F
+ * \date 2026-02-15
+ * \version 1.0
+ */
+
 #ifndef TYPES_HPP
 #define TYPES_HPP
 
-#include <iostream>
+#include <cstdint>
 
-class Data
-{
+/**
+ * \brief Структура для хранения данных из CSV
+ * 
+ * Содержит временную метку и цену из CSV файла.
+ */
+class data {
 public:
-    int_fast64_t receive_ts;
-    double price;
+    std::int_fast64_t receive_ts;   ///< Временная метка получения
+    double price;                   ///< Цена
     
-    Data(int_fast64_t _time, double _price) {
-        receive_ts = _time;
-        price = _price;
-    }
+    /**
+     * \brief Конструктор
+     * \param time_ временная метка
+     * \param price_ цена
+     */
+    data(std::int_fast64_t time_, double price_) noexcept:
+        receive_ts{time_},
+        price{price_}
+    {}
 };
 
-
-#endif
+#endif  // TYPES_HPP

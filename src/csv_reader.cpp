@@ -1,118 +1,210 @@
+/**
+ * \file csv_reader.cpp
+ * \brief Реализация чтения CSV файлов
+ * \author github: Sobig-F
+ * \date 2026-02-15
+ */
+
 #include "csv_reader.hpp"
 
-// #include <thread>
-// #include <chrono>
+#include <algorithm>
+#include <chrono>
+#include <iostream>
+#include <mutex>
+#include <thread>
+#include <vector>
 
-#include "types.hpp"
+#include <boost/algorithm/string.hpp>
+#include <boost/lexical_cast.hpp>
+
 #include "data_queue.hpp"
+#include "types.hpp"
 
-using namespace std::chrono;
-using namespace std::this_thread;
+namespace app::io {
 
-std::mutex cout_mutex;
-
-unique_ptr<Data> take_price_and_time(const string& line) {
-    vector<string> split_line;
-    unique_ptr<Data> result;
+namespace {
+    // Константы для парсинга
+    constexpr char CSV_DELIMITER = ';';
+    constexpr std::size_t TIMESTAMP_INDEX = 0;
+    constexpr std::size_t PRICE_INDEX = 2;
     
-    boost::split(split_line, line, boost::is_any_of(";"));
+    // Мьютекс для синхронизации вывода (можно вынести в отдельный логгер)
+    std::mutex g_cout_mutex;
+    
+    /**
+     * \brief Безопасно парсит строку в int64_t
+     */
+    [[nodiscard]] std::optional<std::int_fast64_t> safe_parse_int(
+        const std::string& str_) noexcept
+    {
+        try {
+            return boost::lexical_cast<std::int_fast64_t>(str_);
+        } catch (const boost::bad_lexical_cast&) {
+            return std::nullopt;
+        }
+    }
+    
+    /**
+     * \brief Безопасно парсит строку в double
+     */
+    [[nodiscard]] std::optional<double> safe_parse_double(
+        const std::string& str_) noexcept
+    {
+        try {
+            return boost::lexical_cast<double>(str_);
+        } catch (const boost::bad_lexical_cast&) {
+            return std::nullopt;
+        }
+    }
+    
+} // unnamed namespace
 
-    return make_unique<Data>(
-            boost::lexical_cast<int_fast64_t>(split_line[0]),
-            boost::lexical_cast<double>(split_line[2])
-    );
+// ==================== csv_reader implementation ====================
+
+csv_reader::csv_reader(path_string filename_, data_queue_ptr tasks_)
+    : _mapping{filename_.c_str(), boost::interprocess::read_only}
+    , _region{_mapping, boost::interprocess::read_only}
+    , _data{static_cast<const char*>(_region.get_address())}
+    , _size{_region.get_size()}
+    , _position{0}
+    , _filename{std::move(filename_)}
+    , _tasks{std::move(tasks_)}
+{}
+
+csv_reader::csv_reader(csv_reader&& other_) noexcept
+    : _mapping{std::move(other_._mapping)}
+    , _region{std::move(other_._region)}
+    , _data{other_._data}
+    , _size{other_._size}
+    , _position{other_._position}
+    , _filename{std::move(other_._filename)}
+    , _tasks{std::move(other_._tasks)}
+{
+    other_._data = nullptr;
+    other_._size = 0;
+    other_._position = 0;
 }
 
-CSVReader::CSVReader(string filename, shared_ptr<data_queue> _tasks) 
-    :   mapping(filename.c_str(), bip::read_only),
-        region(mapping, bip::read_only),
-        data(static_cast<const char*>(region.get_address())),
-        size(region.get_size()),
-        position(0),
-        filename(filename),
-        tasks(_tasks) {}
-
-CSVReader::CSVReader(CSVReader&& other) noexcept
-    :   mapping(std::move(other.mapping)),
-        region(std::move(other.region)),
-        data(other.data),
-        size(other.size),
-        position(other.position),
-        filename(std::move(other.filename)) {
-    
-        other.data = nullptr;
-        other.size = 0;
-        other.position = 0;
-}
-
-CSVReader& CSVReader::operator=(CSVReader&& other) noexcept {
-    if (this != &other) {
-        mapping = std::move(other.mapping);
-        region = std::move(other.region);
-        data = other.data;
-        size = other.size;
-        position = other.position;
-        filename = std::move(other.filename);
+csv_reader& csv_reader::operator=(csv_reader&& other_) noexcept
+{
+    if (this != &other_) {
+        _mapping = std::move(other_._mapping);
+        _region = std::move(other_._region);
+        _data = other_._data;
+        _size = other_._size;
+        _position = other_._position;
+        _filename = std::move(other_._filename);
+        _tasks = std::move(other_._tasks);
         
-        other.data = nullptr;
-        other.size = 0;
-        other.position = 0;
+        other_._data = nullptr;
+        other_._size = 0;
+        other_._position = 0;
     }
     return *this;
 }
 
-void CSVReader::ReadFile() {
-    string line;
-    unique_ptr<Data> csv_data;
+const path_string& csv_reader::filename() const noexcept
+{
+    return _filename;
+}
 
-    while (position < size && data[position] != '\n') {
-        ++position;
+std::unique_ptr<data> csv_reader::parse_line(
+    const std::string& line_) noexcept
+{
+    try {
+        std::vector<std::string> split_line;
+        boost::split(split_line, line_, boost::is_any_of(std::string{CSV_DELIMITER}));
+        
+        if (split_line.size() <= std::max(TIMESTAMP_INDEX, PRICE_INDEX)) {
+            return nullptr;  // Недостаточно полей
+        }
+        
+        auto timestamp = safe_parse_int(split_line[TIMESTAMP_INDEX]);
+        auto price = safe_parse_double(split_line[PRICE_INDEX]);
+        
+        if (!timestamp || !price) {
+            return nullptr;  // Ошибка парсинга чисел
+        }
+        
+        return std::make_unique<data>(*timestamp, *price);
+        
+    } catch (const std::exception& e_) {
+        // Логируем ошибку, но не прерываем выполнение
+        std::lock_guard<std::mutex> lock{g_cout_mutex};
+        std::cerr << "Parse error in line '" << line_ << "': " << e_.what() << std::endl;
+        return nullptr;
     }
-    ++position;
+}
+
+void csv_reader::refresh(std::size_t position_)
+{
+    _mapping = file_mapping{_filename.c_str(), boost::interprocess::read_only};
+    _region = mapped_region{_mapping, boost::interprocess::read_only};
+    _data = static_cast<const char*>(_region.get_address());
+    _size = _region.get_size();
+    _position = position_;
+}
+
+void csv_reader::read_file()
+{
+    using namespace std::chrono_literals;
     
-    while (true)
-    {
-        try
-        {
-            while (position < size && data[position] != '\n') {
-                line += data[position++];
+    std::string current_line;
+    
+    // Пропускаем заголовок (первую строку)
+    while (_position < _size && _data[_position] != '\n') {
+        ++_position;
+    }
+    ++_position;  // Пропускаем сам '\n'
+    
+    // Основной цикл чтения
+    while (!_tasks->is_stopped()) {  // Проверяем работает ли очередь задач
+        try {
+            // Читаем строку до символа новой строки
+            while (_position < _size && _data[_position] != '\n') {
+                current_line += _data[_position++];
             }
             
-            if (position > size) {
-                last_size = size;
-                Refresh(position);
+            // Проверяем, не вышли ли за границы файла
+            if (_position >= _size) {
+                const auto previous_size = _size;
+                refresh(_position);
                 
-                if (size > last_size) {
-                    last_size = size;
-                } else {
-                    sleep_for(milliseconds(100));
+                // Если файл не вырос - ждём
+                if (_size <= previous_size) {
+                    std::this_thread::sleep_for(100ms);
                 }
-            } else {
-                if (line.size() > 0) {
-                    csv_data = take_price_and_time(line);
-                    // cout_mutex.lock();
-                    // cout << filename << ": " << csv_data.get()->receive_ts << "ms / " << csv_data.get()->price << "$" << endl;
-                    // cout_mutex.unlock();
-                    tasks.get()->push(move(csv_data));
-                    line.clear();
-                }
-                ++position;
+                continue;
             }
-
-
-        }
-        catch(const std::exception& e)
-        {
-            std::cerr << e.what() << '\n';
-            break;
+            
+            // Обрабатываем прочитанную строку
+            if (!current_line.empty()) {
+                if (auto data = parse_line(current_line)) {
+                    _tasks->push(std::move(data));
+                    
+                    // Опциональный отладочный вывод
+                    if (false) {  // Заменить на флаг отладки
+                        std::lock_guard<std::mutex> lock{g_cout_mutex};
+                        std::cout << _filename << ": " 
+                                  << data->receive_ts << "ms / " 
+                                  << data->price << "$" << std::endl;
+                    }
+                }
+                current_line.clear();
+            }
+            
+            ++_position;  // Пропускаем '\n'
+            
+        } catch (const std::exception& e_) {
+            std::lock_guard<std::mutex> lock{g_cout_mutex};
+            std::cerr << "Error reading file " << _filename << ": " 
+                      << e_.what() << std::endl;
+            
+            // Пытаемся восстановиться
+            current_line.clear();
+            std::this_thread::sleep_for(1s);
         }
     }
 }
 
-void CSVReader::Refresh(size_t pos) {
-    mapping = bip::file_mapping(filename.c_str(), bip::read_only);
-    region = bip::mapped_region(mapping, bip::read_only);
-    data = (static_cast<const char*>(region.get_address()));
-    size = (region.get_size());
-    position = pos;
-}
+}  // namespace app::io

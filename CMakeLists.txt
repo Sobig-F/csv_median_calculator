@@ -62,7 +62,14 @@ target_link_libraries(csv_median_calculator PRIVATE
 
 # Опции компиляции
 if(MSVC)
+    # target_compile_options(csv_median_calculator PRIVATE -g)
+    target_compile_options(csv_median_calculator PRIVATE /W4
+        $<$<CONFIG:Debug>:-g>  # только для Debug
+    )
     target_compile_options(csv_median_calculator PRIVATE /W4)
 else()
+    target_compile_options(csv_median_calculator PRIVATE -Wall -Wextra -Wpedantic
+        $<$<CONFIG:Debug>:-g>  # только для Debug
+    )
     target_compile_options(csv_median_calculator PRIVATE -Wall -Wextra -Wpedantic)
 endif()
