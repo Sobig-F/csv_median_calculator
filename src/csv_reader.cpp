@@ -19,6 +19,7 @@
 
 #include "data_queue.hpp"
 #include "types.hpp"
+#include "logger.hpp"
 
 namespace app::io {
 
@@ -61,7 +62,7 @@ namespace {
 
 // ==================== csv_reader implementation ====================
 
-csv_reader::csv_reader(path_string filename_, data_queue_ptr tasks_)
+csv_reader::csv_reader(path_string filename_, data_queue_ptr tasks_, bool streamin_mode_)
     : _mapping{filename_.c_str(), boost::interprocess::read_only}
     , _region{_mapping, boost::interprocess::read_only}
     , _data{static_cast<const char*>(_region.get_address())}
@@ -69,6 +70,7 @@ csv_reader::csv_reader(path_string filename_, data_queue_ptr tasks_)
     , _position{0}
     , _filename{std::move(filename_)}
     , _tasks{std::move(tasks_)}
+    , _streaming_mode{streamin_mode_}
 {}
 
 csv_reader::csv_reader(csv_reader&& other_) noexcept
@@ -167,13 +169,23 @@ void csv_reader::read_file()
             
             // Проверяем, не вышли ли за границы файла
             if (_position >= _size) {
+                if (!_streaming_mode) {
+                    spdlog::info(ANSI_GREEN "SUCCESS:" ANSI_RESET " {}", _filename);
+                    return;
+                } else if (_existing_data_has_been_processed) {
+                    _existing_data_has_been_processed = false;
+                }
+
                 const auto previous_size = _size;
                 refresh(_position);
                 
                 // Если файл не вырос - ждём
                 if (_size <= previous_size) {
                     std::this_thread::sleep_for(100ms);
+                } else {
+                    _existing_data_has_been_processed = true;
                 }
+
                 continue;
             }
             

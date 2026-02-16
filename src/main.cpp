@@ -5,14 +5,23 @@
  * \date 2026-02-15
  */
 
-#include <iostream>
+#define NOMINMAX
+
+#include <windows.h>
+
+#include <chrono>
+#include <codecvt>
 #include <filesystem>
+#include <iostream>
+#include <locale>
 #include <thread>
+
 
 #include "argument_parser.hpp"
 #include "config_parser.hpp"
 #include "data_queue.hpp"
 #include "file_streamer.hpp"
+#include "logger.hpp"
 #include "median_calculator.hpp"
 #include "readers_manager.hpp"
 
@@ -25,6 +34,15 @@ namespace fs = std::filesystem;
  * \return 0 при успешном выполнении, иначе код ошибки
  */
 int main(int argc, char* argv[]) {
+    #ifdef _WIN32
+        system("chcp 65001 > nul");
+        SetConsoleOutputCP(CP_UTF8);
+    #endif
+
+    app::processing::logger::init();
+
+    spdlog::info("Запуск приложения " ANSI_GREEN "csv_median_calculator v1.0.0" ANSI_RESET);
+    
     try {
         const auto cli_args = app::cli::parse_arguments(argc, argv);
         
@@ -36,52 +54,53 @@ int main(int argc, char* argv[]) {
         const auto config = app::config::parse_configuration(cli_args._variables);
         
         if (!config.is_valid()) {
-            throw std::runtime_error{
-                "Invalid configuration: input/output directories not set or invalid"
-            };
+            return 1;
         }
         
         auto tasks = std::make_shared<app::processing::data_queue>();
         
-        fs::create_directories(config._output_dir);
+        if (!std::filesystem::exists(config._output_dir / "median.csv")) {
+            spdlog::info("Создание " ANSI_YELLOW "{}" ANSI_RESET, config._output_dir.string() + "/median.csv");
+            fs::create_directories(config._output_dir);
+        }
         
         const auto output_path = config._output_dir / "median.csv";
         
         auto file_streamer = std::make_shared<app::io::file_streamer>(
             output_path.string()
         );
-        auto readers_mgr = std::make_unique<app::io::readers_manager>(tasks);
+        auto readers_mgr = std::make_unique<app::io::readers_manager>(tasks, cli_args._streaming_mode);
         auto median_calc = std::make_shared<app::processing::median_calculator>(tasks);
         
         median_calc->set_output_stream(file_streamer);
         
         for (const auto& file : config._csv_files) {
-            std::cout << "Adding file: " << file << std::endl;
             readers_mgr->add_csv_file(file);
         }
         
-        std::cout << "Started " << readers_mgr->reader_count() 
-                  << " readers. Processing..." << std::endl;
+        // spdlog::info("Запущенно {} читателей", readers_mgr->reader_count());
         
         auto calc_thread = median_calc->run_async();
         
-        std::cout << "Press Enter to stop..." << std::endl;
-        std::cin.get();
-        
-        std::cout << "Shutting down..." << std::endl;
-        median_calc->stop();
-        readers_mgr->stop_all();
-        tasks->stop();
-        
-        readers_mgr->join_all();
-        if (calc_thread.joinable()) {
-            calc_thread.join();
+        if (cli_args._streaming_mode) {
+            std::cout << "Нажмите Enter для остановки..." << std::endl;
+            std::cin.get();
+            spdlog::info("Остановка...");
+            readers_mgr->stop_all();
+            readers_mgr->join_all_readers();
+        } else {
+            readers_mgr->join_all_readers();
+            readers_mgr->stop_all();
         }
         
-        std::cout << "Done. Results saved to: " << output_path << std::endl;
+        std::cout << "======================================================" << std::endl;
+        spdlog::info("Обработано строк: " ANSI_GREEN "{}" ANSI_RESET, readers_mgr->total_tasks().load());
+        spdlog::info("Записано изменений медианы: " ANSI_GREEN "{}" ANSI_RESET, file_streamer->total_records());
+        spdlog::info("Результат сохранен в: " ANSI_YELLOW "{}" ANSI_RESET, output_path.string());
+        spdlog::info(ANSI_GREEN "Завершение работы" ANSI_RESET);
         
     } catch (const std::exception& e) {
-        std::cerr << "Error: " << e.what() << std::endl;
+        spdlog::critical("Ошибка: {}", e.what());
         return 1;
     }
     

@@ -9,6 +9,8 @@
 
 #include <utility>
 
+#include "logger.hpp"
+
 namespace app::processing {
 
 // ==================== move operations ====================
@@ -43,19 +45,6 @@ void data_queue::push(std::unique_ptr<data> task_)
     _condition.notify_one();
 }
 
-std::optional<std::unique_ptr<data>> data_queue::pop() noexcept
-{
-    std::lock_guard<std::mutex> lock{_mutex};
-    
-    if (_tasks.empty()) {
-        return std::nullopt;
-    }
-    
-    auto result = std::move(_tasks.front());
-    _tasks.pop();
-    return result;
-}
-
 std::unique_ptr<data> data_queue::wait_and_pop()
 {
     std::unique_lock<std::mutex> lock{_mutex};
@@ -65,13 +54,14 @@ std::unique_ptr<data> data_queue::wait_and_pop()
         return !_tasks.empty() || _stopped.load();
     });
     
-    // Если остановлено и очередь пуста, возвращаем nullptr
-    if (_stopped.load() && _tasks.empty()) {
+    // Если остановлено или очередь пуста, возвращаем nullptr
+    if (_stopped.load() || _tasks.empty()) {
         return nullptr;
     }
     
     auto result = std::move(_tasks.front());
     _tasks.pop();
+    ++_total_count;
     return result;
 }
 
@@ -89,6 +79,7 @@ bool data_queue::empty() const noexcept
 
 void data_queue::stop() noexcept
 {
+    // spdlog::info("Остановка очереди");
     _stopped.store(true);
     _condition.notify_all();  // Будим все ожидающие потоки
 }
@@ -96,6 +87,11 @@ void data_queue::stop() noexcept
 std::atomic<bool> data_queue::is_stopped() noexcept
 {
     return _stopped.load();
+}
+
+std::atomic<std::size_t> data_queue::total_count() const noexcept
+{
+    return _total_count.load();
 }
 
 }  // namespace app::processing

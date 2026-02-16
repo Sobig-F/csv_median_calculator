@@ -53,12 +53,6 @@ public:
     void push(std::unique_ptr<data> task_);
     
     /**
-     * \brief Извлекает задачу из очереди
-     * \return std::nullopt если очередь пуста, иначе уникальный указатель на data
-     */
-    [[nodiscard]] std::optional<std::unique_ptr<data>> pop() noexcept;
-    
-    /**
      * \brief Извлекает задачу из очереди (блокирующая версия)
      * \return уникальный указатель на data (ждёт пока появится элемент)
      */
@@ -86,11 +80,14 @@ public:
      */
     std::atomic<bool> is_stopped() noexcept;
 
+    [[nodiscard]] std::atomic<std::size_t> total_count() const noexcept;
+
 private:
     std::queue<std::unique_ptr<data>> _tasks;        ///< Очередь задач
     mutable std::mutex _mutex;                       ///< Мьютекс для синхронизации
     std::condition_variable _condition;              ///< Condition variable для ожидания
     std::atomic<bool> _stopped{false};               ///< Флаг остановки
+    std::atomic<std::size_t> _total_count{0};        ///< Обработанные задачи
 };
 
 }  // namespace app::processing

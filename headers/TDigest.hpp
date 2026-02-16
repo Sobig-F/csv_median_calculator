@@ -101,6 +101,11 @@ private:
      */
     [[nodiscard]] std::size_t find_nearest_centroid(double value_) const;
 
+    /**
+     * \brief Возвращает количество данных
+     */
+    [[nodiscard]] std::size_t total_count() const noexcept;
+
 private:
     static constexpr double MAX_DOUBLE = std::numeric_limits<double>::max();
     static constexpr double WEIGHT_MULTIPLIER = 4.0;

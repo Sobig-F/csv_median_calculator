@@ -15,6 +15,8 @@ namespace app::io {
 
 namespace fs = std::filesystem;
 
+std::size_t file_streamer::_total_records = 0;
+
 // ==================== конструктор/деструктор ====================
 
 file_streamer::file_streamer(std::string filename_)
@@ -73,12 +75,19 @@ file_streamer& file_streamer::write_median(
     // Форматируем вывод
     _file_stream << std::fixed << std::setprecision(8) << timestamp_ << ';' << median_ << std::endl;
     
+    ++_total_records;
+
     return *this;
 }
 
 bool file_streamer::is_open() const noexcept
 {
     return _file_stream.is_open();
+}
+
+std::size_t file_streamer::total_records() const noexcept
+{
+    return _total_records;
 }
 
 void file_streamer::flush()

@@ -38,7 +38,7 @@ public:
      * \param tasks_ очередь для передачи прочитанных данных
      * \throws boost::interprocess::interprocess_exception если файл не может быть открыт
      */
-    csv_reader(path_string filename_, data_queue_ptr tasks_);
+    csv_reader(path_string filename_, data_queue_ptr tasks_, bool streamin_mode_);
     
     /**
      * \brief Деструктор
@@ -90,6 +90,8 @@ private:
     std::size_t _position;      ///< Текущая позиция чтения
     path_string _filename;      ///< Имя файла
     data_queue_ptr _tasks;      ///< Очередь для результатов
+    bool _existing_data_has_been_processed{true}; ///< Обработаны ли существующие данные
+    bool _streaming_mode{false}; ///< Состояние streaming-mode (нужно ли ожидать новых данных)
 };
 
 }  // namespace app::io

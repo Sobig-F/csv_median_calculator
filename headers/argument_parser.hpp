@@ -20,6 +20,7 @@ namespace app::cli {
  * \brief Результат парсинга аргументов командной строки
  */
 struct parsing_result {
+    bool _streaming_mode{false};
     bool _show_help{false};
     std::string _config_file{"config.toml"};
     boost::program_options::variables_map _variables;

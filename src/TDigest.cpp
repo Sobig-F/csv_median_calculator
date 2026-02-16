@@ -72,6 +72,11 @@ std::size_t tdigest::find_nearest_centroid(double value_) const
     return (left_dist < right_dist) ? (pos - 1) : pos;
 }
 
+std::size_t tdigest::total_count() const noexcept
+{
+    return _total_count;
+}
+
 void tdigest::add(double value_)
 {
     if (value_ < _min_value) _min_value = value_;

@@ -59,6 +59,11 @@ public:
      * \return true если файл открыт
      */
     [[nodiscard]] bool is_open() const noexcept;
+
+    /**
+     * \brief Возвращает количество добавленных записей
+     */
+    std::size_t total_records() const noexcept;
     
     /**
      * \brief Принудительно сбрасывает буфер на диск
@@ -75,6 +80,7 @@ private:
     std::ofstream _file_stream;           ///< Файловый поток
     std::string _filename;                ///< Имя файла для перемещения
     bool _header_written{false};          ///< Флаг записи заголовка
+    static std::size_t _total_records;  ///< Общее количество записей
 };
 
 // Перегрузки операторов для удобства (но лучше использовать write_median)

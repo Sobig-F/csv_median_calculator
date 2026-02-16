@@ -6,11 +6,13 @@
  */
 
 #include "readers_manager.hpp"
-#include "data_queue.hpp"
 
 #include <filesystem>
 #include <stdexcept>
 #include <utility>
+
+#include "data_queue.hpp"
+#include "logger.hpp"
 
 namespace app::io {
 
@@ -18,14 +20,15 @@ namespace fs = std::filesystem;
 
 // ==================== конструкторы/деструктор ====================
 
-readers_manager::readers_manager(std::shared_ptr<app::processing::data_queue> tasks_)
+readers_manager::readers_manager(std::shared_ptr<app::processing::data_queue> tasks_, bool streaming_mode_)
     : _tasks{std::move(tasks_)}
+    , _streaming_mode{streaming_mode_}
 {}
 
 readers_manager::~readers_manager()
 {
     stop_all();
-    join_all();
+    join_all_readers();
 }
 
 readers_manager::readers_manager(readers_manager&& other_) noexcept
@@ -37,7 +40,7 @@ readers_manager& readers_manager::operator=(readers_manager&& other_) noexcept
 {
     if (this != &other_) {
         stop_all();
-        join_all();
+        join_all_readers();
         
         std::lock_guard<std::mutex> lock{_mutex};
         _readers = std::move(other_._readers);
@@ -65,7 +68,7 @@ void readers_manager::add_csv_file(std::string filename_)
     
     try {
         // Создаём читателя
-        auto reader = std::make_shared<app::io::csv_reader>(filename_, _tasks);
+        auto reader = std::make_shared<app::io::csv_reader>(filename_, _tasks, _streaming_mode);
         
         // Создаём поток с функцией чтения
         // Используем jthread для автоматического join при разрушении
@@ -91,21 +94,28 @@ void readers_manager::stop_all() noexcept
     
     // Останавливаем все очереди задач, чтобы читатели завершились
     if (_tasks) {
+        // spdlog::info("Есть очередь");
+        using namespace std::chrono_literals;
+
+        while (!_streaming_mode && !_tasks->empty()) {
+            // spdlog::info("Ожидание завершения задач");
+            std::this_thread::sleep_for(500ms);
+        }
+
         _tasks->stop();
     }
 }
 
-void readers_manager::join_all()
+void readers_manager::join_all_readers()
 {
     std::lock_guard<std::mutex> lock{_mutex};
-    
+    // spdlog::info("Ожидание завершения читателей");
     for (auto& pair : _readers) {
         if (pair._thread.joinable()) {
-            std::cout << "Try join" << std::endl;
             pair._thread.join();
-            std::cout << "Success join" << std::endl;
         }
     }
+    // spdlog::info("Читатели остановлены");
     
     _readers.clear();
 }
@@ -124,6 +134,11 @@ bool readers_manager::has_active_readers() const noexcept
         [](const auto& pair) {
             return pair._thread.joinable();
         });
+}
+
+std::atomic<std::size_t> readers_manager::total_tasks() const noexcept
+{
+    return _tasks->total_count().load();
 }
 
 }  // namespace app::io

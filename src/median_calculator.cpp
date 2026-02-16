@@ -11,6 +11,8 @@
 #include <iomanip>
 #include <iostream>
 
+#include "logger.hpp"
+
 namespace app::processing {
 
 // ==================== конструкторы/деструктор ====================
@@ -24,7 +26,7 @@ median_calculator::median_calculator(
 
 median_calculator::~median_calculator()
 {
-    stop();
+    // stop();
 }
 
 median_calculator::median_calculator(median_calculator&& other_) noexcept
@@ -32,19 +34,19 @@ median_calculator::median_calculator(median_calculator&& other_) noexcept
     , _tasks{std::move(other_._tasks)}
     , _file_streamer{std::move(other_._file_streamer)}
     , _running{other_._running.load()}
-    , _stopped{other_._stopped.load()}
+    // , _stopped{other_._stopped.load()}
 {}
 
 median_calculator& median_calculator::operator=(median_calculator&& other_) noexcept
 {
     if (this != &other_) {
-        stop();  // Останавливаем текущую обработку
+        _running.store(false);  // Останавливаем текущую обработку
         
         _tdigest = std::move(other_._tdigest);
         _tasks = std::move(other_._tasks);
         _file_streamer = std::move(other_._file_streamer);
         _running.store(other_._running.load());
-        _stopped.store(other_._stopped.load());
+        // _stopped.store(other_._stopped.load());
     }
     return *this;
 }
@@ -58,11 +60,11 @@ void median_calculator::set_output_stream(
     _file_streamer = std::move(streamer_);
 }
 
-void median_calculator::run()
-{
-    _running.store(true);
-    process_loop();
-}
+// void median_calculator::run()
+// {
+//     _running.store(true);
+//     process_loop();
+// }
 
 std::thread median_calculator::run_async()
 {
@@ -70,11 +72,10 @@ std::thread median_calculator::run_async()
     return std::thread{[this] { process_loop(); }};
 }
 
-void median_calculator::stop() noexcept
-{
-    _stopped.store(true);
-    _running.store(false);
-}
+// void median_calculator::stop() noexcept
+// {
+//     _stopped.store(true);
+// }
 
 bool median_calculator::is_running() const noexcept
 {
@@ -95,26 +96,25 @@ void median_calculator::output_result(
     } else {
         // Вывод в консоль
         std::cout << std::fixed << std::setprecision(8)
-                  << "receive_ts: " << timestamp_
-                  << " / median: " << median_
-                  << std::endl;
+        << "receive_ts: " << timestamp_
+        << " / median: " << median_
+        << std::endl;
     }
 }
 
 void median_calculator::process_loop() noexcept
 {
+    // spdlog::info("Запуск калькулятора");
     double old_median = -1.0;
-    
-    while (!_stopped.load()) {
+
+    while (_running.load()) {
         try {
             // Блокируемся до появления данных или остановки
             auto task = _tasks->wait_and_pop();
-            
-            if (!task) {
-                // Сигнал остановки
+
+            if (!task || !_running.load()) {
                 break;
             }
-            
             // Обновляем T-Digest
             _tdigest->add(task->price);
             const double now_median = _tdigest->median();
@@ -132,6 +132,7 @@ void median_calculator::process_loop() noexcept
         }
     }
     
+    // spdlog::info("Остановка калькулятора");
     _running.store(false);
 }
 

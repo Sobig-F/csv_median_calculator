@@ -36,6 +36,13 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(tomlplusplus)
 
+FetchContent_Declare(
+  spdlog
+  GIT_REPOSITORY https://github.com/gabime/spdlog.git
+  GIT_TAG v1.x
+)
+FetchContent_MakeAvailable(spdlog)
+
 
 # Исходные файлы
 file(GLOB SRC "src/*.cpp")
@@ -58,6 +65,7 @@ target_link_libraries(csv_median_calculator PRIVATE
     Boost::lexical_cast
     Boost::accumulators
     tomlplusplus::tomlplusplus
+    spdlog::spdlog
 )
 
 # Опции компиляции

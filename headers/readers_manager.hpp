@@ -32,8 +32,9 @@ public:
     /**
      * \brief Конструктор
      * \param tasks_ очередь для передачи прочитанных данных
+     * \param streaming_mode_ режим потокового чтения данных
      */
-    explicit readers_manager(std::shared_ptr<app::processing::data_queue> tasks_);
+    explicit readers_manager(std::shared_ptr<app::processing::data_queue> tasks_, bool streaming_mode_);
     
     /**
      * \brief Деструктор - останавливает все потоки
@@ -49,7 +50,7 @@ public:
     readers_manager& operator=(readers_manager&& other_) noexcept;
     
     /**
-     * \brief Добавляет новый CSV файл для чтения
+     * \brief Добавляет новый CSV файл для чтения и запускает поток для чтения
      * \param filename_ путь к CSV файлу
      * \throws std::invalid_argument если файл не существует
      * \throws std::runtime_error если не удалось создать читатель
@@ -64,10 +65,10 @@ public:
     /**
      * \brief Ждёт завершения всех потоков
      */
-    void join_all();
+    void join_all_readers();
     
     /**
-     * \brief Возвращает количество активных читателей
+     * \brief Возвращает количество читателей
      */
     [[nodiscard]] std::size_t reader_count() const noexcept;
     
@@ -75,6 +76,11 @@ public:
      * \brief Проверяет, есть ли активные потоки
      */
     [[nodiscard]] bool has_active_readers() const noexcept;
+
+    /**
+     * \brief Возвращает количество обработанных задач
+     */
+    [[nodiscard]] std::atomic<std::size_t> total_tasks() const noexcept;
 
 private:
     /**
@@ -88,6 +94,7 @@ private:
     std::vector<reader_thread_pair> _readers;               ///< Читатели и их потоки
     std::shared_ptr<app::processing::data_queue> _tasks;    ///< Очередь для данных
     mutable std::mutex _mutex;                              ///< Мьютекс для синхронизации
+    bool _streaming_mode{false};                            ///< Состояние streaming-mode (нужно ли ожидать новых данных)
 };
 
 }  // namespace app::io

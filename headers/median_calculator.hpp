@@ -57,20 +57,10 @@ public:
     void set_output_stream(std::shared_ptr<app::io::file_streamer> streamer_) noexcept;
     
     /**
-     * \brief Запускает обработку данных (блокирующий вызов)
-     */
-    void run();
-    
-    /**
      * \brief Запускает обработку в отдельном потоке
      * \return ссылка на поток для возможности join
      */
     std::thread run_async();
-    
-    /**
-     * \brief Останавливает обработку
-     */
-    void stop() noexcept;
     
     /**
      * \brief Проверяет, запущена ли обработка
@@ -96,7 +86,6 @@ private:
     std::shared_ptr<app::io::file_streamer> _file_streamer; ///< Выходной поток
     std::mutex _output_mutex;                               ///< Мьютекс для вывода
     std::atomic<bool> _running{false};                      ///< Флаг работы
-    std::atomic<bool> _stopped{false};                      ///< Флаг остановки
 };
 
 }  // namespace app::processing

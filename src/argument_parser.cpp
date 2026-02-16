@@ -17,6 +17,7 @@ namespace {
     constexpr std::string_view CONFIG_OPTION = "config";
     constexpr std::string_view HELP_OPTION = "help";
     constexpr std::string_view DEFAULT_CONFIG = "config.toml";
+    constexpr std::string_view STREAMING_MODE = "streaming-mode";
     
     /**
      * \brief Кастомный парсер для флага -cfg
@@ -30,6 +31,10 @@ namespace {
         
         if (s_.find("-cfg=") == 0) {
             return {std::string{CONFIG_OPTION}, s_.substr(5)};
+        }
+
+        if (s_ == "-config") {
+            return {std::string{CONFIG_OPTION}, {}};
         }
         
         return {};
@@ -62,7 +67,8 @@ boost::program_options::options_description create_options_description() {
         (std::string{CONFIG_OPTION}.c_str(), 
          boost::program_options::value<std::string>()->default_value(
              std::string{DEFAULT_CONFIG}),
-         "Path to configuration file (can use -cfg or -cfg=FILE)");
+         "Path to configuration file (can use -config, -cfg or -cfg=FILE)")
+        (std::string{STREAMING_MODE}.c_str(), "Enable streaming mode (flag, no arguments needed)");
     
     return desc;
 }
@@ -86,6 +92,10 @@ parsing_result parse_arguments(int argc_, char* argv_[]) {
         if (result._variables.count(std::string{CONFIG_OPTION})) {
             result._config_file = result._variables[std::string{CONFIG_OPTION}]
                                       .as<std::string>();
+        }
+
+        if (result._variables.count(std::string{STREAMING_MODE})) {
+            result._streaming_mode = true;
         }
         
     } catch (const boost::program_options::error& e_) {
