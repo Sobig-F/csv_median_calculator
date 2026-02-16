@@ -34,7 +34,7 @@ data_queue& data_queue::operator=(data_queue&& other_) noexcept
 
 // ==================== public interface ====================
 
-void data_queue::push(std::unique_ptr<data> task_)
+void data_queue::push(std::unique_ptr<data> task_) noexcept(false)
 {
     {
         std::lock_guard<std::mutex> lock{_mutex};
@@ -45,7 +45,7 @@ void data_queue::push(std::unique_ptr<data> task_)
     _condition.notify_one();
 }
 
-std::unique_ptr<data> data_queue::wait_and_pop()
+std::unique_ptr<data> data_queue::wait_and_pop() noexcept(false)
 {
     std::unique_lock<std::mutex> lock{_mutex};
     
@@ -65,12 +65,6 @@ std::unique_ptr<data> data_queue::wait_and_pop()
     return result;
 }
 
-std::size_t data_queue::size() const noexcept
-{
-    std::lock_guard<std::mutex> lock{_mutex};
-    return _tasks.size();
-}
-
 bool data_queue::empty() const noexcept
 {
     std::lock_guard<std::mutex> lock{_mutex};
@@ -79,7 +73,6 @@ bool data_queue::empty() const noexcept
 
 void data_queue::stop() noexcept
 {
-    // spdlog::info("Остановка очереди");
     _stopped.store(true);
     _condition.notify_all();  // Будим все ожидающие потоки
 }

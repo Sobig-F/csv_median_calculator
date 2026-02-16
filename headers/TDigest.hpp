@@ -39,7 +39,7 @@ public:
      * \brief Добавляет значение в распределение
      * \param value_ значение для добавления
      */
-    void add(double value_);
+    void add(double value_) noexcept;
     
     /**
      * \brief Вычисляет квантиль распределения
@@ -47,13 +47,13 @@ public:
      * \return значение квантиля
      * \throws std::invalid_argument если q_ вне [0,1]
      */
-    [[nodiscard]] double quantile(double q_) const;
+    [[nodiscard]] double quantile(double q_) const noexcept(false);
     
     /**
      * \brief Вычисляет медиану распределения
      * \return медианное значение
      */
-    [[nodiscard]] double median() const { return quantile(0.5); }
+    [[nodiscard]] double median() const noexcept { return quantile(0.5); }
     
     /**
      * \brief Возвращает количество добавленных элементов
@@ -99,7 +99,7 @@ private:
     /**
      * \brief Находит ближайший центроид к значению
      */
-    [[nodiscard]] std::size_t find_nearest_centroid(double value_) const;
+    [[nodiscard]] std::size_t find_nearest_centroid(double value_) const noexcept;
 
     /**
      * \brief Возвращает количество данных

@@ -60,23 +60,18 @@ public:
      * \brief Запускает обработку в отдельном потоке
      * \return ссылка на поток для возможности join
      */
-    std::thread run_async();
-    
-    /**
-     * \brief Проверяет, запущена ли обработка
-     */
-    [[nodiscard]] bool is_running() const noexcept;
+    std::thread run_async() noexcept;
 
 private:
     /**
      * \brief Внутренний метод обработки данных
      */
-    void process_loop() noexcept;
+    void process_loop() noexcept(false);
     
     /**
      * \brief Выводит результат
      */
-    void output_result(std::int_fast64_t timestamp_, double median_);
+    void output_result(std::int_fast64_t timestamp_, double median_) noexcept(false);
 
 private:
     static constexpr double EPSILON = 1e-10;                ///< Порог изменения медианы

@@ -50,19 +50,13 @@ public:
      * \brief Добавляет задачу в очередь
      * \param task_ уникальный указатель на data
      */
-    void push(std::unique_ptr<data> task_);
+    void push(std::unique_ptr<data> task_) noexcept(false);
     
     /**
      * \brief Извлекает задачу из очереди (блокирующая версия)
      * \return уникальный указатель на data (ждёт пока появится элемент)
      */
-    [[nodiscard]] std::unique_ptr<data> wait_and_pop();
-    
-    /**
-     * \brief Возвращает размер очереди
-     * \return количество элементов в очереди
-     */
-    [[nodiscard]] std::size_t size() const noexcept;
+    [[nodiscard]] std::unique_ptr<data> wait_and_pop() noexcept(false);
     
     /**
      * \brief Проверяет, пуста ли очередь

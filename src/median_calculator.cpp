@@ -60,33 +60,17 @@ void median_calculator::set_output_stream(
     _file_streamer = std::move(streamer_);
 }
 
-// void median_calculator::run()
-// {
-//     _running.store(true);
-//     process_loop();
-// }
-
-std::thread median_calculator::run_async()
+std::thread median_calculator::run_async() noexcept
 {
     _running.store(true);
     return std::thread{[this] { process_loop(); }};
-}
-
-// void median_calculator::stop() noexcept
-// {
-//     _stopped.store(true);
-// }
-
-bool median_calculator::is_running() const noexcept
-{
-    return _running.load();
 }
 
 // ==================== private методы ====================
 
 void median_calculator::output_result(
     std::int_fast64_t timestamp_,
-    double median_)
+    double median_) noexcept(false)
 {
     std::lock_guard<std::mutex> lock{_output_mutex};
     
@@ -102,37 +86,29 @@ void median_calculator::output_result(
     }
 }
 
-void median_calculator::process_loop() noexcept
+void median_calculator::process_loop() noexcept(false)
 {
     // spdlog::info("Запуск калькулятора");
     double old_median = -1.0;
 
     while (_running.load()) {
-        try {
-            // Блокируемся до появления данных или остановки
-            auto task = _tasks->wait_and_pop();
+        // Блокируемся до появления данных или остановки
+        auto task = _tasks->wait_and_pop();
 
-            if (!task || !_running.load()) {
-                break;
-            }
-            // Обновляем T-Digest
-            _tdigest->add(task->price);
-            const double now_median = _tdigest->median();
+        if (!task || !_running.load()) {
+            break;
+        }
+        // Обновляем T-Digest
+        _tdigest->add(task->price);
+        const double now_median = _tdigest->median();
             
-            // Выводим если медиана значительно изменилась
-            if (std::abs(now_median - old_median) > EPSILON) {
-                output_result(task->receive_ts, now_median);
-                old_median = now_median;
-            }
-            
-        } catch (const std::exception& e_) {
-            // Логируем ошибку но продолжаем работу
-            std::lock_guard<std::mutex> lock{_output_mutex};
-            std::cerr << "Error in median calculation: " << e_.what() << std::endl;
+        // Выводим если медиана значительно изменилась
+        if (std::abs(now_median - old_median) > EPSILON) {
+            output_result(task->receive_ts, now_median);
+            old_median = now_median;
         }
     }
     
-    // spdlog::info("Остановка калькулятора");
     _running.store(false);
 }
 

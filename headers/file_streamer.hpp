@@ -53,12 +53,6 @@ public:
      * \return ссылка на себя для chaining
      */
     file_streamer& write_median(std::int_fast64_t timestamp_, double median_);
-    
-    /**
-     * \brief Проверяет, открыт ли файл
-     * \return true если файл открыт
-     */
-    [[nodiscard]] bool is_open() const noexcept;
 
     /**
      * \brief Возвращает количество добавленных записей
@@ -68,19 +62,19 @@ public:
     /**
      * \brief Принудительно сбрасывает буфер на диск
      */
-    void flush();
+    void flush() noexcept;
 
 private:
     /**
      * \brief Записывает заголовок если файл пустой
      */
-    void write_header_if_needed();
+    void write_header_if_needed() noexcept;
     
 private:
     std::ofstream _file_stream;           ///< Файловый поток
     std::string _filename;                ///< Имя файла для перемещения
     bool _header_written{false};          ///< Флаг записи заголовка
-    static std::size_t _total_records;  ///< Общее количество записей
+    static std::size_t _total_records;    ///< Общее количество записей
 };
 
 // Перегрузки операторов для удобства (но лучше использовать write_median)

@@ -51,7 +51,7 @@ readers_manager& readers_manager::operator=(readers_manager&& other_) noexcept
 
 // ==================== public методы ====================
 
-void readers_manager::add_csv_file(std::string filename_)
+void readers_manager::add_csv_file(std::string filename_) noexcept(false)
 {
     // Проверяем существование файла
     if (!fs::exists(filename_)) {
@@ -94,11 +94,9 @@ void readers_manager::stop_all() noexcept
     
     // Останавливаем все очереди задач, чтобы читатели завершились
     if (_tasks) {
-        // spdlog::info("Есть очередь");
         using namespace std::chrono_literals;
 
         while (!_streaming_mode && !_tasks->empty()) {
-            // spdlog::info("Ожидание завершения задач");
             std::this_thread::sleep_for(500ms);
         }
 
@@ -106,34 +104,17 @@ void readers_manager::stop_all() noexcept
     }
 }
 
-void readers_manager::join_all_readers()
+void readers_manager::join_all_readers() noexcept
 {
     std::lock_guard<std::mutex> lock{_mutex};
-    // spdlog::info("Ожидание завершения читателей");
+
     for (auto& pair : _readers) {
         if (pair._thread.joinable()) {
             pair._thread.join();
         }
     }
-    // spdlog::info("Читатели остановлены");
     
     _readers.clear();
-}
-
-std::size_t readers_manager::reader_count() const noexcept
-{
-    std::lock_guard<std::mutex> lock{_mutex};
-    return _readers.size();
-}
-
-bool readers_manager::has_active_readers() const noexcept
-{
-    std::lock_guard<std::mutex> lock{_mutex};
-    
-    return std::any_of(_readers.begin(), _readers.end(),
-        [](const auto& pair) {
-            return pair._thread.joinable();
-        });
 }
 
 std::atomic<std::size_t> readers_manager::total_tasks() const noexcept

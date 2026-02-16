@@ -50,7 +50,7 @@ double tdigest::max_weight(double q_) const noexcept
     return WEIGHT_MULTIPLIER * _compression * q_ * (1.0 - q_);
 }
 
-std::size_t tdigest::find_nearest_centroid(double value_) const
+std::size_t tdigest::find_nearest_centroid(double value_) const noexcept
 {
     if (_centroids.empty()) {
         return 0;
@@ -77,7 +77,7 @@ std::size_t tdigest::total_count() const noexcept
     return _total_count;
 }
 
-void tdigest::add(double value_)
+void tdigest::add(double value_) noexcept
 {
     if (value_ < _min_value) _min_value = value_;
     if (value_ > _max_value) _max_value = value_;
@@ -151,7 +151,7 @@ void tdigest::compress()
     _centroids = std::move(compressed);
 }
 
-double tdigest::quantile(double q_) const
+double tdigest::quantile(double q_) const noexcept(false)
 {
     if (q_ < 0.0 || q_ > 1.0) {
         throw std::invalid_argument{

@@ -43,7 +43,7 @@ struct parsing_result {
  * \throws std::runtime_error при ошибках парсинга
  */
 [[nodiscard]] parsing_result parse_configuration(
-    const boost::program_options::variables_map& vm_);
+    const boost::program_options::variables_map& vm_) noexcept(false);
 
 }  // namespace app::config
 

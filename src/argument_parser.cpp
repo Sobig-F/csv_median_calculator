@@ -55,11 +55,7 @@ namespace {
     
 } // unnamed namespace
 
-bool parsing_result::is_valid() const noexcept {
-    return !_show_help;  // если показан help, то результат не для использования
-}
-
-boost::program_options::options_description create_options_description() {
+boost::program_options::options_description create_options_description() noexcept {
     boost::program_options::options_description desc{"Allowed options"};
     
     desc.add_options()
@@ -73,7 +69,7 @@ boost::program_options::options_description create_options_description() {
     return desc;
 }
 
-parsing_result parse_arguments(int argc_, char* argv_[]) {
+parsing_result parse_arguments(int argc_, char* argv_[]) noexcept(false) {
     const auto desc = create_options_description();
     parsing_result result;
     

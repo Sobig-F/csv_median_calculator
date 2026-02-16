@@ -138,7 +138,7 @@ std::unique_ptr<data> csv_reader::parse_line(
     }
 }
 
-void csv_reader::refresh(std::size_t position_)
+void csv_reader::refresh(std::size_t position_) noexcept(false)
 {
     _mapping = file_mapping{_filename.c_str(), boost::interprocess::read_only};
     _region = mapped_region{_mapping, boost::interprocess::read_only};
@@ -147,7 +147,7 @@ void csv_reader::refresh(std::size_t position_)
     _position = position_;
 }
 
-void csv_reader::read_file()
+void csv_reader::read_file() noexcept(false)
 {
     using namespace std::chrono_literals;
     

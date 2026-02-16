@@ -53,7 +53,7 @@ file_streamer& file_streamer::operator=(file_streamer&& other_) noexcept
 
 // ==================== private методы ====================
 
-void file_streamer::write_header_if_needed()
+void file_streamer::write_header_if_needed() noexcept
 {
     // Если файл пустой - пишем заголовок
     if (fs::file_size(_filename) == 0) {
@@ -80,17 +80,12 @@ file_streamer& file_streamer::write_median(
     return *this;
 }
 
-bool file_streamer::is_open() const noexcept
-{
-    return _file_stream.is_open();
-}
-
 std::size_t file_streamer::total_records() const noexcept
 {
     return _total_records;
 }
 
-void file_streamer::flush()
+void file_streamer::flush() noexcept
 {
     if (_file_stream.is_open()) {
         _file_stream.flush();

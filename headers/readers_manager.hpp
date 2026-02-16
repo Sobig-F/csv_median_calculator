@@ -55,7 +55,7 @@ public:
      * \throws std::invalid_argument если файл не существует
      * \throws std::runtime_error если не удалось создать читатель
      */
-    void add_csv_file(std::string filename_);
+    void add_csv_file(std::string filename_) noexcept(false);
     
     /**
      * \brief Останавливает все потоки чтения
@@ -65,17 +65,7 @@ public:
     /**
      * \brief Ждёт завершения всех потоков
      */
-    void join_all_readers();
-    
-    /**
-     * \brief Возвращает количество читателей
-     */
-    [[nodiscard]] std::size_t reader_count() const noexcept;
-    
-    /**
-     * \brief Проверяет, есть ли активные потоки
-     */
-    [[nodiscard]] bool has_active_readers() const noexcept;
+    void join_all_readers() noexcept;
 
     /**
      * \brief Возвращает количество обработанных задач

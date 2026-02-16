@@ -59,7 +59,7 @@ public:
      * Метод работает в цикле, ожидая появления новых данных в файле.
      * Для остановки чтения используйте механизм отмены через data_queue.
      */
-    void read_file();
+    void read_file() noexcept(false);
     
     /**
      * \brief Возвращает имя файла
@@ -72,7 +72,7 @@ private:
      * \brief Обновляет memory-mapped region после изменения файла
      * \param position_ текущая позиция для продолжения чтения
      */
-    void refresh(std::size_t position_);
+    void refresh(std::size_t position_) noexcept(false);
     
     /**
      * \brief Парсит одну строку CSV в структуру Data
@@ -91,7 +91,7 @@ private:
     path_string _filename;      ///< Имя файла
     data_queue_ptr _tasks;      ///< Очередь для результатов
     bool _existing_data_has_been_processed{true}; ///< Обработаны ли существующие данные
-    bool _streaming_mode{false}; ///< Состояние streaming-mode (нужно ли ожидать новых данных)
+    bool _streaming_mode{false};///< Состояние streaming-mode (нужно ли ожидать новых данных)
 };
 
 }  // namespace app::io

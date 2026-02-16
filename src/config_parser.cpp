@@ -83,7 +83,7 @@ bool parsing_result::is_valid() const noexcept {
 }
 
 parsing_result parse_configuration(
-    const boost::program_options::variables_map& vm_)
+    const boost::program_options::variables_map& vm_) noexcept(false)
 {
     parsing_result config;
     string config_path;

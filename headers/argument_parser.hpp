@@ -24,12 +24,6 @@ struct parsing_result {
     bool _show_help{false};
     std::string _config_file{"config.toml"};
     boost::program_options::variables_map _variables;
-    
-    /**
-     * \brief Проверяет, валиден ли результат
-     * \return true если результат можно использовать
-     */
-    [[nodiscard]] bool is_valid() const noexcept;
 };
 
 /**
@@ -41,13 +35,13 @@ struct parsing_result {
  */
 [[nodiscard]] parsing_result parse_arguments(
     int argc_,
-    char* argv_[]);
+    char* argv_[]) noexcept(false);
 
 /**
  * \brief Создаёт описание доступных опций
  * \return объект с описанием опций
  */
-[[nodiscard]] boost::program_options::options_description create_options_description();
+[[nodiscard]] boost::program_options::options_description create_options_description() noexcept;
 
 }  // namespace app::cli
 

@@ -78,8 +78,6 @@ int main(int argc, char* argv[]) {
             readers_mgr->add_csv_file(file);
         }
         
-        // spdlog::info("Запущенно {} читателей", readers_mgr->reader_count());
-        
         auto calc_thread = median_calc->run_async();
         
         if (cli_args._streaming_mode) {
