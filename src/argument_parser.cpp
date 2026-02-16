@@ -18,6 +18,10 @@ namespace {
     constexpr std::string_view HELP_OPTION = "help";
     constexpr std::string_view DEFAULT_CONFIG = "config.toml";
     constexpr std::string_view STREAMING_MODE = "streaming-mode";
+    constexpr std::string_view MEAN_VALUE = "mean";
+    constexpr std::string_view P90_VALUE = "p90";
+    constexpr std::string_view P95_VALUE = "p95";
+    constexpr std::string_view P99_VALUE = "p99";
     
     /**
      * \brief Кастомный парсер для флага -cfg
@@ -64,8 +68,11 @@ boost::program_options::options_description create_options_description() noexcep
          boost::program_options::value<std::string>()->default_value(
              std::string{DEFAULT_CONFIG}),
          "Path to configuration file (can use -config, -cfg or -cfg=FILE)")
-        (std::string{STREAMING_MODE}.c_str(), "Enable streaming mode (flag, no arguments needed)");
-    
+        (std::string{STREAMING_MODE}.c_str(), "Enable streaming mode (flag, no arguments needed)")
+        (std::string{MEAN_VALUE}.c_str(), "Enable mean value calculate")
+        (std::string{P90_VALUE}.c_str(), "Enable p90 quantile calculate")
+        (std::string{P95_VALUE}.c_str(), "Enable p95 quantile calculate")
+        (std::string{P99_VALUE}.c_str(), "Enable p99 quantile calculate");
     return desc;
 }
 

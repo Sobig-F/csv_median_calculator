@@ -28,6 +28,7 @@ struct parsing_result {
     path _config_file;
     string_vector _csv_files;
     string_vector _csv_filename_mask;
+    std::vector<std::string> _extra_values_name;
     
     /**
      * \brief Проверяет, валидна ли конфигурация

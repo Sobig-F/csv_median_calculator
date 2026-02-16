@@ -195,4 +195,33 @@ double tdigest::quantile(double q_) const noexcept(false)
     return _centroids.back()._mean;
 }
 
+double tdigest::mean() const noexcept
+{
+    double mean_centroids_sum{0};
+    for (auto& centroid : _centroids) {
+        mean_centroids_sum += centroid._mean;
+    }
+    return mean_centroids_sum / _total_count;
+}
+
+std::vector<std::pair<std::string, double>> tdigest::extra_values(std::vector<std::string> const values_name_) const noexcept
+{
+    std::vector<std::pair<std::string, double>> _result;
+    _result.reserve(values_name_.size());
+
+    for (std::string _values_name : values_name_) {
+        if (_values_name == "mean") {
+            _result.push_back(std::make_pair(_values_name, mean()));
+        } else if (_values_name == "p90") {
+            _result.push_back(std::make_pair(_values_name, quantile(0.9)));
+        } else if (_values_name == "p95") {
+            _result.push_back(std::make_pair(_values_name, quantile(0.95)));
+        } else if (_values_name == "p99") {
+            _result.push_back(std::make_pair(_values_name, quantile(0.99)));
+        }
+    }
+
+    return _result;
+}
+
 }  // namespace app::statistics

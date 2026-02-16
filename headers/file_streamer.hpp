@@ -13,6 +13,7 @@
 #include <fstream>
 #include <string>
 #include <type_traits>
+#include <vector>
 
 #include "types.hpp"
 
@@ -52,7 +53,10 @@ public:
      * \param median_ медианное значение
      * \return ссылка на себя для chaining
      */
-    file_streamer& write_median(std::int_fast64_t timestamp_, double median_);
+    file_streamer& write_median(
+        std::int_fast64_t timestamp_,
+        double median_,
+        std::vector<std::pair<std::string, double>> const extra_values_) noexcept(false);
 
     /**
      * \brief Возвращает количество добавленных записей
@@ -68,7 +72,7 @@ private:
     /**
      * \brief Записывает заголовок если файл пустой
      */
-    void write_header_if_needed() noexcept;
+    void write_header_if_needed(std::vector<std::pair<std::string, double>> const extra_values_name_) noexcept;
     
 private:
     std::ofstream _file_stream;           ///< Файловый поток

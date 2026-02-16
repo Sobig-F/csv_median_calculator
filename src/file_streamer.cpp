@@ -30,9 +30,6 @@ file_streamer::file_streamer(std::string filename_)
             "Failed to open file for writing: " + _filename
         };
     }
-    
-    // Проверяем, нужно ли писать заголовок
-    write_header_if_needed();
 }
 
 file_streamer::file_streamer(file_streamer&& other_) noexcept
@@ -53,28 +50,43 @@ file_streamer& file_streamer::operator=(file_streamer&& other_) noexcept
 
 // ==================== private методы ====================
 
-void file_streamer::write_header_if_needed() noexcept
+void file_streamer::write_header_if_needed(std::vector<std::pair<std::string, double>> const extra_values_name_) noexcept
 {
     // Если файл пустой - пишем заголовок
     if (fs::file_size(_filename) == 0) {
-        _file_stream << "receive_ts;median\n";
-        _header_written = true;
+        _file_stream << "receive_ts;median";
+        for (auto& _extra_value_name : extra_values_name_) {
+            _file_stream << ";" << _extra_value_name.first;
+        }
+        _file_stream << std::endl;
     }
+    _header_written = true;
 }
 
 // ==================== public методы ====================
 
 file_streamer& file_streamer::write_median(
     std::int_fast64_t timestamp_,
-    double median_)
+    double median_,
+    std::vector<std::pair<std::string, double>> const extra_values_) noexcept(false)
 {
     if (!_file_stream.is_open()) {
         throw std::runtime_error{"File stream is not open"};
     }
+
+    // Проверяем, нужно ли писать заголовок
+    if (!_header_written) {
+        write_header_if_needed(extra_values_);
+    }
     
     // Форматируем вывод
-    _file_stream << std::fixed << std::setprecision(8) << timestamp_ << ';' << median_ << std::endl;
+    _file_stream << std::fixed << std::setprecision(8) << timestamp_ << ';' << median_;
     
+    for (auto& value : extra_values_) {
+        _file_stream << ";" << std::fixed << std::setprecision(8) << value.second;
+    }
+    _file_stream << std::endl;
+
     ++_total_records;
 
     return *this;

@@ -70,7 +70,7 @@ int main(int argc, char* argv[]) {
             output_path.string()
         );
         auto readers_mgr = std::make_unique<app::io::readers_manager>(tasks, cli_args._streaming_mode);
-        auto median_calc = std::make_shared<app::processing::median_calculator>(tasks);
+        auto median_calc = std::make_shared<app::processing::median_calculator>(tasks, config._extra_values_name);
         
         median_calc->set_output_stream(file_streamer);
         
@@ -90,6 +90,8 @@ int main(int argc, char* argv[]) {
             readers_mgr->join_all_readers();
             readers_mgr->stop_all();
         }
+        
+        file_streamer->flush();
         
         std::cout << "======================================================" << std::endl;
         spdlog::info("Обработано строк: " ANSI_GREEN "{}" ANSI_RESET, readers_mgr->total_tasks().load());

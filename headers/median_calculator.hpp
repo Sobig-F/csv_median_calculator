@@ -35,6 +35,7 @@ public:
      */
     explicit median_calculator(
         std::shared_ptr<data_queue> tasks_,
+        std::vector<std::string> extra_values_ = {},
         std::size_t digest_compression_ = 25);
     
     /**
@@ -71,7 +72,10 @@ private:
     /**
      * \brief Выводит результат
      */
-    void output_result(std::int_fast64_t timestamp_, double median_) noexcept(false);
+    void output_result(
+        std::int_fast64_t timestamp_,
+        double median_,
+        std::vector<std::pair<std::string, double>> const extra_values_) noexcept(false);
 
 private:
     static constexpr double EPSILON = 1e-10;                ///< Порог изменения медианы
@@ -81,6 +85,7 @@ private:
     std::shared_ptr<app::io::file_streamer> _file_streamer; ///< Выходной поток
     std::mutex _output_mutex;                               ///< Мьютекс для вывода
     std::atomic<bool> _running{false};                      ///< Флаг работы
+    std::vector<std::string> _extra_values_name;
 };
 
 }  // namespace app::processing

@@ -24,6 +24,7 @@ struct parsing_result {
     bool _show_help{false};
     std::string _config_file{"config.toml"};
     boost::program_options::variables_map _variables;
+    std::vector<std::string> _extra_values;
 };
 
 /**

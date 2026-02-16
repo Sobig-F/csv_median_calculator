@@ -57,10 +57,11 @@
 **Структура `parsing_result`:**
 ```cpp
 struct parsing_result {
-    bool _streaming_mode;       // Режим реального времени
-    bool _show_help;            // Показать справку
-    std::string _config_file;   // Путь к конфигу (по умолч. "config.toml")
+    bool _streaming_mode{false};            // Режим реального времени
+    bool _show_help{false};                 // Показать справку
+    std::string _config_file{"config.toml"};// Путь к конфигу (по умолч. "config.toml")
     boost::program_options::variables_map _variables;
+    std::vector<std::string> _extra_values; //extra-values
 };
 ```
 **Функции:**
@@ -71,14 +72,14 @@ struct parsing_result {
 
 ### 3.2 Модуль конфигурации (`config_parser.hpp`)
 **Структура parsing_result:**
-
 ```cpp
 struct parsing_result {
-    path _input_dir;                  // Входная директория
-    path _output_dir;                 // Выходная директория
-    path _config_file;                // Файл конфигурации
-    string_vector _csv_files;         // Список CSV файлов
-    string_vector _csv_filename_mask; // Маска имён файлов
+    path _input_dir;                            // Входная директория
+    path _output_dir;                           // Выходная директория
+    path _config_file;                          // Файл конфигурации
+    string_vector _csv_files;                   // Список CSV файлов
+    string_vector _csv_filename_mask;           // Маска имён файлов
+    std::vector<std::string> _extra_values_name;// Список названий extra-values
 };
 ```
 **Поддерживаемый формат конфига (TOML):**

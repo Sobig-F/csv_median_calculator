@@ -54,6 +54,18 @@ public:
      * \return медианное значение
      */
     [[nodiscard]] double median() const noexcept { return quantile(0.5); }
+
+    /**
+     * \brief Вычисляет mean
+     * \return среднее значение
+     */
+    [[nodiscard]] double mean() const noexcept;
+    
+    /**
+     * \brief Вычисляет extra_values (mean, p90, p95, p99)
+     * \return extra_values (mean, p90, p95, p99)
+     */
+    [[nodiscard]] std::vector<std::pair<std::string, double>> extra_values(std::vector<std::string> const values_name_) const noexcept;
     
     /**
      * \brief Возвращает количество добавленных элементов

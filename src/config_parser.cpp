@@ -99,11 +99,24 @@ parsing_result parse_configuration(
         spdlog::critical("Файл конфигурации не найден");
         return config;
     }
-    spdlog::info("Чтение файла конфигурации: " ANSI_YELLOW "{}" ANSI_RESET, config_path);
     
     config._config_file = config_path;
+
+    if (vm_.contains("mean")) {
+        config._extra_values_name.push_back("mean");
+    }
+    if (vm_.contains("p90")) {
+        config._extra_values_name.push_back("p90");
+    }
+    if (vm_.contains("p95")) {
+        config._extra_values_name.push_back("p95");
+    }
+    if (vm_.contains("p99")) {
+        config._extra_values_name.push_back("p99");
+    }
     
     try {
+        spdlog::info("Чтение файла конфигурации: " ANSI_YELLOW "{}" ANSI_RESET, config_path);
         const auto toml_file = toml::parse_file(config._config_file.string());
         
         // Валидация секции [main]
