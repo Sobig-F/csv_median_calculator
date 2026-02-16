@@ -205,7 +205,7 @@ class AdvancedOrderGenerator:
 def main():
     # Можно настроить параметры
     generator = AdvancedOrderGenerator(
-        filename='market_data_orders.csv',
+        filename='input.csv',
         show_live_preview=True
     )
     
