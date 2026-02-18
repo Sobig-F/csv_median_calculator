@@ -193,18 +193,9 @@ void csv_reader::read_file() noexcept(false)
             if (!current_line.empty()) {
                 if (auto data = parse_line(current_line)) {
                     _tasks->push(std::move(data));
-                    
-                    // Опциональный отладочный вывод
-                    if (false) {  // Заменить на флаг отладки
-                        std::lock_guard<std::mutex> lock{g_cout_mutex};
-                        std::cout << _filename << ": " 
-                                  << data->receive_ts << "ms / " 
-                                  << data->price << "$" << std::endl;
-                    }
                 }
                 current_line.clear();
             }
-            
             ++_position;  // Пропускаем '\n'
             
         } catch (const std::exception& e_) {
