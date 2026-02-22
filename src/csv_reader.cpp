@@ -71,7 +71,9 @@ csv_reader::csv_reader(path_string filename_, data_queue_ptr tasks_, bool stream
     , _filename{std::move(filename_)}
     , _tasks{std::move(tasks_)}
     , _streaming_mode{streamin_mode_}
-{}
+{
+    _local_queue = std::make_shared<app::processing::data_queue>();
+}
 
 csv_reader::csv_reader(csv_reader&& other_) noexcept
     : _mapping{std::move(other_._mapping)}
@@ -147,7 +149,7 @@ void csv_reader::refresh(std::size_t position_) noexcept(false)
     _position = position_;
 }
 
-void csv_reader::read_file() noexcept(false)
+void csv_reader::read_file(std::stop_token stoken_) noexcept(false)
 {
     using namespace std::chrono_literals;
     
@@ -160,18 +162,28 @@ void csv_reader::read_file() noexcept(false)
     ++_position;  // Пропускаем сам '\n'
     
     // Основной цикл чтения
-    while (!_tasks->is_stopped()) {  // Проверяем работает ли очередь задач
+    while (!stoken_.stop_requested()) {
         try {
             // Читаем строку до символа новой строки
             while (_position < _size && _data[_position] != '\n') {
                 current_line += _data[_position++];
             }
             
+            // Обрабатываем прочитанную строку
+            if (!current_line.empty()) {
+                if (auto data = parse_line(current_line)) {
+                    // _tasks->push(std::move(data));
+                    _local_queue->push(std::move(data));
+                }
+                current_line.clear();
+            }
+            ++_position;  // Пропускаем '\n'
+            
             // Проверяем, не вышли ли за границы файла
             if (_position >= _size) {
                 if (!_streaming_mode) {
                     spdlog::info(ANSI_GREEN "SUCCESS:" ANSI_RESET " {}", _filename);
-                    return;
+                    break;
                 } else if (_existing_data_has_been_processed) {
                     _existing_data_has_been_processed = false;
                 }
@@ -189,14 +201,6 @@ void csv_reader::read_file() noexcept(false)
                 continue;
             }
             
-            // Обрабатываем прочитанную строку
-            if (!current_line.empty()) {
-                if (auto data = parse_line(current_line)) {
-                    _tasks->push(std::move(data));
-                }
-                current_line.clear();
-            }
-            ++_position;  // Пропускаем '\n'
             
         } catch (const std::exception& e_) {
             std::lock_guard<std::mutex> lock{g_cout_mutex};

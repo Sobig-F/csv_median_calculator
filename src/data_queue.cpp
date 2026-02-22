@@ -45,23 +45,26 @@ void data_queue::push(std::unique_ptr<data> task_) noexcept(false)
     _condition.notify_one();
 }
 
-std::unique_ptr<data> data_queue::wait_and_pop() noexcept(false)
+//изменить на pop() без ожидания (все потребители будут ожидать самостоятельно)
+std::unique_ptr<data> data_queue::pop() noexcept(false)
 {
-    std::unique_lock<std::mutex> lock{_mutex};
-    
+    std::unique_lock<std::mutex> lock{_mutex}; 
     // Ждём пока появятся данные или не будет остановки
     _condition.wait(lock, [this] {
         return !_tasks.empty() || _stopped.load();
     });
     
     // Если остановлено или очередь пуста, возвращаем nullptr
-    if (_stopped.load() || _tasks.empty()) {
+    if (_stopped.load()) {
         return nullptr;
     }
     
-    auto result = std::move(_tasks.front());
-    _tasks.pop();
-    ++_total_count;
+    std::unique_ptr<data> result;
+    if (!_tasks.empty()) {
+        result = std::move(_tasks.front());
+        _tasks.pop();
+        ++_total_count;
+    }
     return result;
 }
 
@@ -80,6 +83,13 @@ void data_queue::stop() noexcept
 std::atomic<bool> data_queue::is_stopped() noexcept
 {
     return _stopped.load();
+}
+
+const data* data_queue::front() noexcept
+{
+    std::lock_guard<std::mutex> lock{_mutex};
+    if (_tasks.empty()) { return nullptr; }
+    return _tasks.front().get();
 }
 
 std::atomic<std::size_t> data_queue::total_count() const noexcept

@@ -59,13 +59,18 @@ public:
      * Метод работает в цикле, ожидая появления новых данных в файле.
      * Для остановки чтения используйте механизм отмены через data_queue.
      */
-    void read_file() noexcept(false);
+    void read_file(std::stop_token stoken_) noexcept(false);
     
     /**
      * \brief Возвращает имя файла
      * \return путь к файлу
      */
     [[nodiscard]] const path_string& filename() const noexcept;
+
+    // /**
+    //  * \brief Локальная очередь данных
+    //  */
+    [[nodiscard]] std::shared_ptr<app::processing::data_queue> local_queue() const noexcept { return _local_queue; };
 
 private:
     /**
@@ -92,6 +97,7 @@ private:
     data_queue_ptr _tasks;      ///< Очередь для результатов
     bool _existing_data_has_been_processed{true}; ///< Обработаны ли существующие данные
     bool _streaming_mode{false};///< Состояние streaming-mode (нужно ли ожидать новых данных)
+    std::shared_ptr<app::processing::data_queue> _local_queue; ///< Локальная очередь ридера
 };
 
 }  // namespace app::io

@@ -34,7 +34,7 @@ public:
      * \param tasks_ очередь для передачи прочитанных данных
      * \param streaming_mode_ режим потокового чтения данных
      */
-    explicit readers_manager(std::shared_ptr<app::processing::data_queue> tasks_, bool streaming_mode_);
+    explicit readers_manager(bool streaming_mode_);
     
     /**
      * \brief Деструктор - останавливает все потоки
@@ -56,35 +56,56 @@ public:
      * \throws std::runtime_error если не удалось создать читатель
      */
     void add_csv_file(std::string filename_) noexcept(false);
-    
-    /**
-     * \brief Останавливает все потоки чтения
-     */
-    void stop_all() noexcept;
-    
-    /**
-     * \brief Ждёт завершения всех потоков
-     */
-    void join_all_readers() noexcept;
 
     /**
      * \brief Возвращает количество обработанных задач
      */
     [[nodiscard]] std::atomic<std::size_t> total_tasks() const noexcept;
 
+    /**
+     * \brief Запускает сортировку и отправку задач из reader в очередь задач
+     */
+    void run() noexcept;
+
+    /**
+     * \brief Останавливает всех reader, выключает "воронку" и закрывает очередь
+     */
+    void stop() noexcept;
+
+    /**
+     * \brief Очередь задач
+     */
+    [[nodiscard]] std::shared_ptr<app::processing::data_queue> tasks() const noexcept { return _tasks; };
+
 private:
     /**
-     * \brief Внутренняя структура для хранения пары читатель-поток
+     * \brief Перекидывает задачи из _readers в _tasks
      */
-    struct reader_thread_pair {
+    void redirecting_tasks(std::stop_token stoken) noexcept;
+
+    /**
+     * \brief Внутренняя структура для хранения читателей
+     */
+    struct reader {
         std::shared_ptr<app::io::csv_reader> _reader;
         std::jthread _thread;
+        std::shared_ptr<app::processing::data_queue> _reader_local_queue;
+
+        reader(std::shared_ptr<app::io::csv_reader> reader_, std::jthread thread_)
+        : _reader{std::move(reader_)}
+        , _thread{std::move(thread_)}
+        {
+            _reader_local_queue = _reader->local_queue();
+        }
     };
     
-    std::vector<reader_thread_pair> _readers;               ///< Читатели и их потоки
+    std::vector<reader> _readers;                           ///< Читатели, их потоки и верхние data
     std::shared_ptr<app::processing::data_queue> _tasks;    ///< Очередь для данных
     mutable std::mutex _mutex;                              ///< Мьютекс для синхронизации
     bool _streaming_mode{false};                            ///< Состояние streaming-mode (нужно ли ожидать новых данных)
+    std::jthread _redirecting_tasks;                        ///< Поток "воронки" задач
+    std::stop_source _readers_stoken;                       ///< Источник токена остановки reader
+    std::stop_source _stoken_redirecting;                   ///< Источник токена остановки "воронки"
 };
 
 }  // namespace app::io

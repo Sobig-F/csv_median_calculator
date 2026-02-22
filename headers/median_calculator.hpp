@@ -36,6 +36,7 @@ public:
     explicit median_calculator(
         std::shared_ptr<data_queue> tasks_,
         std::vector<std::string> extra_values_ = {},
+        std::shared_ptr<app::io::file_streamer> file_streamer_ = nullptr,
         std::size_t digest_compression_ = 25);
     
     /**
@@ -50,24 +51,14 @@ public:
     // Разрешение перемещения
     median_calculator(median_calculator&& other_) noexcept;
     median_calculator& operator=(median_calculator&& other_) noexcept;
-    
-    /**
-     * \brief Устанавливает streamer для записи в файл
-     * \param streamer_ поток для вывода результатов
-     */
-    void set_output_stream(std::shared_ptr<app::io::file_streamer> streamer_) noexcept;
-    
-    /**
-     * \brief Запускает обработку в отдельном потоке
-     * \return ссылка на поток для возможности join
-     */
-    std::thread run_async() noexcept;
+
+    void stop() noexcept;
 
 private:
     /**
      * \brief Внутренний метод обработки данных
      */
-    void process_loop() noexcept(false);
+    void calculating(std::stop_token stoken_) noexcept(false);
     
     /**
      * \brief Выводит результат
@@ -84,8 +75,10 @@ private:
     std::shared_ptr<data_queue> _tasks;                     ///< Входная очередь
     std::shared_ptr<app::io::file_streamer> _file_streamer; ///< Выходной поток
     std::mutex _output_mutex;                               ///< Мьютекс для вывода
-    std::atomic<bool> _running{false};                      ///< Флаг работы
-    std::vector<std::string> _extra_values_name;
+    std::vector<std::string> _extra_values_name;            ///< Вычисляемые values
+    std::jthread _calculating;                              ///< Поток калькулятора
+    mutable std::mutex _mutex;                              ///< Мьютекс для записи в файл
+    std::stop_source _stop_source;                          ///< Источник токена остановки потока калькулятора
 };
 
 }  // namespace app::processing

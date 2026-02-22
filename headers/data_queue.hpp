@@ -54,9 +54,9 @@ public:
     
     /**
      * \brief Извлекает задачу из очереди (блокирующая версия)
-     * \return уникальный указатель на data (ждёт пока появится элемент)
+     * \return уникальный указатель на data (ждёт пока появится элемент или is_stopped())
      */
-    [[nodiscard]] std::unique_ptr<data> wait_and_pop() noexcept(false);
+    std::unique_ptr<data> pop() noexcept(false);
     
     /**
      * \brief Проверяет, пуста ли очередь
@@ -65,7 +65,7 @@ public:
     [[nodiscard]] bool empty() const noexcept;
     
     /**
-     * \brief Останавливает ожидание в wait_and_pop
+     * \brief Останавливает ожидание в pop
      */
     void stop() noexcept;
 
@@ -74,6 +74,14 @@ public:
      */
     std::atomic<bool> is_stopped() noexcept;
 
+    /**
+     * \brief Просмотр задачи
+     */
+    [[nodiscard]] const data* front() noexcept;
+
+    /**
+     * \brief Всего отдано задач
+     */
     [[nodiscard]] std::atomic<std::size_t> total_count() const noexcept;
 
 private:

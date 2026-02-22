@@ -57,7 +57,6 @@ int main(int argc, char* argv[]) {
             return 1;
         }
         
-        auto tasks = std::make_shared<app::processing::data_queue>();
         
         if (!std::filesystem::exists(config._output_dir / "median.csv")) {
             spdlog::info("Создание " ANSI_YELLOW "{}" ANSI_RESET, config._output_dir.string() + "/median.csv");
@@ -69,28 +68,29 @@ int main(int argc, char* argv[]) {
         auto file_streamer = std::make_shared<app::io::file_streamer>(
             output_path.string()
         );
-        auto readers_mgr = std::make_unique<app::io::readers_manager>(tasks, cli_args._streaming_mode);
-        auto median_calc = std::make_shared<app::processing::median_calculator>(tasks, config._extra_values_name);
+        spdlog::info("Создание менеджера ридеров");
+        auto readers_mgr = std::make_unique<app::io::readers_manager>(cli_args._streaming_mode);
+        spdlog::info("Создание калькулятора");
+        auto median_calc = std::make_unique<app::processing::median_calculator>(readers_mgr->tasks(), config._extra_values_name, file_streamer);
         
-        median_calc->set_output_stream(file_streamer);
-        
+        spdlog::info("Добавление файлов в менеджер");
         for (const auto& file : config._csv_files) {
             readers_mgr->add_csv_file(file);
         }
         
-        auto calc_thread = median_calc->run_async();
-        
+        // using namespace std::chrono_literals;
+        // std::this_thread::sleep_for(5s);
+        // spdlog::info("Запуск воронки менеджера");
+        readers_mgr->run();
+
         if (cli_args._streaming_mode) {
             std::cout << "Нажмите Enter для остановки..." << std::endl;
             std::cin.get();
             spdlog::info("Остановка...");
-            readers_mgr->stop_all();
-            readers_mgr->join_all_readers();
-        } else {
-            readers_mgr->join_all_readers();
-            readers_mgr->stop_all();
         }
         
+        readers_mgr->stop();
+        median_calc->stop();
         file_streamer->flush();
         
         std::cout << "======================================================" << std::endl;
@@ -98,7 +98,7 @@ int main(int argc, char* argv[]) {
         spdlog::info("Записано изменений медианы: " ANSI_GREEN "{}" ANSI_RESET, file_streamer->total_records());
         spdlog::info("Результат сохранен в: " ANSI_YELLOW "{}" ANSI_RESET, output_path.string());
         spdlog::info(ANSI_GREEN "Завершение работы" ANSI_RESET);
-        
+        // system("wmic process where \"name='csv_median_calculator.exe'\" get processid,threadcount");
     } catch (const std::exception& e) {
         spdlog::critical("Ошибка: {}", e.what());
         return 1;

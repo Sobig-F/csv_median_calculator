@@ -20,52 +20,49 @@ namespace app::processing {
 median_calculator::median_calculator(
     std::shared_ptr<data_queue> tasks_,
     std::vector<std::string> extra_values_,
+    std::shared_ptr<app::io::file_streamer> file_streamer_,
     std::size_t digest_compression_)
     : _extra_values_name{move(extra_values_)}
+    , _file_streamer{file_streamer_}
     , _tdigest{std::make_unique<app::statistics::tdigest>(digest_compression_)}
     , _tasks{std::move(tasks_)}
-{}
+{
+    _calculating = std::jthread{[this] {
+        calculating(_stop_source.get_token());
+    }};
+}
 
 median_calculator::~median_calculator()
 {
-    // stop();
+
 }
 
 median_calculator::median_calculator(median_calculator&& other_) noexcept
     : _tdigest{std::move(other_._tdigest)}
     , _tasks{std::move(other_._tasks)}
     , _file_streamer{std::move(other_._file_streamer)}
-    , _running{other_._running.load()}
-    // , _stopped{other_._stopped.load()}
 {}
 
 median_calculator& median_calculator::operator=(median_calculator&& other_) noexcept
 {
     if (this != &other_) {
-        _running.store(false);  // Останавливаем текущую обработку
+        stop();  // Останавливаем текущую обработку
         
         _tdigest = std::move(other_._tdigest);
         _tasks = std::move(other_._tasks);
         _file_streamer = std::move(other_._file_streamer);
-        _running.store(other_._running.load());
-        // _stopped.store(other_._stopped.load());
     }
     return *this;
 }
 
 // ==================== public методы ====================
 
-void median_calculator::set_output_stream(
-    std::shared_ptr<app::io::file_streamer> streamer_) noexcept
+void median_calculator::stop() noexcept
 {
-    std::lock_guard<std::mutex> lock{_output_mutex};
-    _file_streamer = std::move(streamer_);
-}
-
-std::thread median_calculator::run_async() noexcept
-{
-    _running.store(true);
-    return std::thread{[this] { process_loop(); }};
+    _stop_source.request_stop();
+    if (_calculating.joinable()) {
+        _calculating.join();
+    }
 }
 
 // ==================== private методы ====================
@@ -90,16 +87,16 @@ void median_calculator::output_result(
     }
 }
 
-void median_calculator::process_loop() noexcept(false)
+void median_calculator::calculating(std::stop_token stoken_) noexcept(false)
 {
     double old_median = -1.0;
 
-    while (_running.load()) {
+    while (!stoken_.stop_requested()) {
         // Блокируемся до появления данных или остановки
-        auto task = _tasks->wait_and_pop();
+        std::unique_ptr<data> task = _tasks->pop();
 
-        if (!task || !_running.load()) {
-            break;
+        if (!task) {
+            continue;
         }
         // Обновляем T-Digest
         _tdigest->add(task->price);
@@ -112,8 +109,6 @@ void median_calculator::process_loop() noexcept(false)
             old_median = now_median;
         }
     }
-    
-    _running.store(false);
 }
 
 }  // namespace app::processing
