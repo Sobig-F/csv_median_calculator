@@ -135,7 +135,7 @@ std::unique_ptr<data> csv_reader::parse_line(
     } catch (const std::exception& e_) {
         // Логируем ошибку, но не прерываем выполнение
         std::lock_guard<std::mutex> lock{g_cout_mutex};
-        std::cerr << "Parse error in line '" << line_ << "': " << e_.what() << std::endl;
+        spdlog::error("Parse error in line '{}': ", e_.what());
         return nullptr;
     }
 }
@@ -172,7 +172,6 @@ void csv_reader::read_file(std::stop_token stoken_) noexcept(false)
             // Обрабатываем прочитанную строку
             if (!current_line.empty()) {
                 if (auto data = parse_line(current_line)) {
-                    // _tasks->push(std::move(data));
                     _local_queue->push(std::move(data));
                 }
                 current_line.clear();

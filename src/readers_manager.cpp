@@ -123,8 +123,6 @@ std::atomic<std::size_t> readers_manager::total_tasks() const noexcept
 
 void readers_manager::redirecting_tasks(std::stop_token stoken) noexcept
 {
-    // using namespace std::chrono_literals;
-
     int_fast64_t min_recieve_ts = 0;
     while (
     [&] -> bool {

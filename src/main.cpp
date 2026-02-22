@@ -78,9 +78,6 @@ int main(int argc, char* argv[]) {
             readers_mgr->add_csv_file(file);
         }
         
-        // using namespace std::chrono_literals;
-        // std::this_thread::sleep_for(2s);
-        // spdlog::info("Запуск воронки менеджера");
         readers_mgr->run();
 
         if (cli_args._streaming_mode) {
@@ -98,7 +95,6 @@ int main(int argc, char* argv[]) {
         spdlog::info("Записано изменений медианы: " ANSI_GREEN "{}" ANSI_RESET, file_streamer->total_records());
         spdlog::info("Результат сохранен в: " ANSI_YELLOW "{}" ANSI_RESET, output_path.string());
         spdlog::info(ANSI_GREEN "Завершение работы" ANSI_RESET);
-        // system("wmic process where \"name='csv_median_calculator.exe'\" get processid,threadcount");
     } catch (const std::exception& e) {
         spdlog::critical("Ошибка: {}", e.what());
         return 1;
