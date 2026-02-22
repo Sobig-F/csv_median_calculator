@@ -77,6 +77,9 @@ void readers_manager::add_csv_file(std::string filename_) noexcept(false)
             std::move(reader),
             std::move(thread),
         });
+
+        using namespace std::chrono_literals;
+        std::this_thread::sleep_for(100ms);
         
     } catch (const std::exception& e_) {
         throw std::runtime_error{
@@ -94,6 +97,7 @@ void readers_manager::run() noexcept
 
 void readers_manager::stop() noexcept
 {
+    using namespace std::chrono_literals;
     if (_streaming_mode) {
         //остановить ридеры
         _readers_stoken.request_stop();
@@ -101,11 +105,10 @@ void readers_manager::stop() noexcept
     for (auto& reader : _readers) {
         if (reader._thread.joinable()) {
             reader._thread.join();
+            std::this_thread::sleep_for(100ms);
         }
     }
     if (_redirecting_tasks.joinable()) {
-        using namespace std::chrono_literals;
-        std::this_thread::sleep_for(1s);
         _stoken_redirecting.request_stop();
         _redirecting_tasks.join();
     }
@@ -125,17 +128,16 @@ void readers_manager::redirecting_tasks(std::stop_token stoken) noexcept
     int_fast64_t min_recieve_ts = 0;
     while (
     [&] -> bool {
-        // std::lock_guard<std::mutex> lock{_mutex};
+        std::lock_guard<std::mutex> lock{_mutex};
         for (auto& tasks : _readers) {
             if (!tasks._reader_local_queue->empty()) {
                 return true;
             }
         }
-        // std::cout << "FALSE" << std::endl;
         if (!stoken.stop_requested()) { return true; }
         return false;
     }()) {
-        // std::lock_guard<std::mutex> lock{_mutex};
+        std::lock_guard<std::mutex> lock{_mutex};
         std::shared_ptr<app::processing::data_queue> queue_with_min_ts = nullptr;
         for (auto& tasks : _readers) {
             if (tasks._reader_local_queue->empty()) {
@@ -143,16 +145,15 @@ void readers_manager::redirecting_tasks(std::stop_token stoken) noexcept
             }
 
             // //провевяемая очередь начинается с элемента < минимального времени
-            // while (!tasks._reader_local_queue->empty()) {
-            //     // spdlog::info("{}", tasks._reader_local_queue->front()->receive_ts);
-            //     // Получаем указатель на первый элемент
-            //     const data* front_data = tasks._reader_local_queue->front();
-            //     if (!front_data) break;  // защита на всякий случай
+            while (!tasks._reader_local_queue->empty()) {
+                // Получаем указатель на первый элемент
+                const data* front_data = tasks._reader_local_queue->front();
+                if (!front_data) break;  // защита на всякий случай
                 
-            //     if (front_data->receive_ts >= min_recieve_ts) break;
-            //     // Удаляем устаревший элемент
-            //     tasks._reader_local_queue->pop();
-            // }
+                if (front_data->receive_ts >= min_recieve_ts) break;
+                // Удаляем устаревший элемент
+                tasks._reader_local_queue->pop();
+            }
 
             // захвачена первая непустая очередь
             if (!tasks._reader_local_queue->empty() && queue_with_min_ts == nullptr) {
